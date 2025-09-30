@@ -80,6 +80,9 @@ class Malla:
         """Método público: Muestra la malla"""
         print("Malla actual:")
         print(self.malla)
+
+    def retornar_malla(self):
+        return self.malla
     
     def obtener_valor(self, x, y):
         """Método público: Obtiene valor en coordenadas específicas"""
@@ -270,6 +273,25 @@ class Malla:
         print(f"Valor mínimo: {self.malla.min():.3f}")
         print(f"Valor máximo: {self.malla.max():.3f}")
         print(f"Valor promedio: {self.malla.mean():.3f}")
+    
+class Vector:
+    def __init__(self, matrizMalla):
+        self.x0 = np.zeros(matrizMalla.shape[0]*matrizMalla.shape[1])
+        #print("filas ", matrizMalla.shape[0], "columnas ", matrizMalla.shape[1])
+        for i in range(matrizMalla.shape[0]):
+            for j in range(matrizMalla.shape[1]):
+                self.x0[i*matrizMalla.shape[1]+j] = matrizMalla[i, j]
+        
+    def retornar_vector(self):
+        return self.x0
+    
+    def mostrar_vector(self):
+        print("x0 ", self.x0)
+
+
+
+    def __str__(self):
+        return f"Vector({self.x}, {self.y})"
 
 
 def main():
@@ -280,31 +302,29 @@ def main():
     # Cargar matriz desde archivo
     if os.path.exists("matriz_valores_iniciales.txt"):
         matriz_cargada = np.loadtxt("matriz_valores_iniciales.txt", delimiter='\t')
+        mallaInicial = Malla(400, 40, 8, 1, bloqueSuperior, bloqueInfierior, 10, 5, matriz_inicial=matriz_cargada)
+        vector = Vector(mallaInicial.retornar_malla())
+        vector.visualizar_vector()
     else:
         matriz_cargada = None
-    
-    # Crear malla
-    malla = Malla(400, 40, 8, 1, bloqueSuperior, bloqueInfierior, 10, 5, matriz_inicial=matriz_cargada)
-    
+        mallaInicial = Malla(400, 40, 8, 1, bloqueSuperior, bloqueInfierior, 10, 5, matriz_inicial=matriz_cargada)
+        # Guardar la matriz en un archivo de texto
+        mallaInicial.guardar_matriz_txt("matriz_valores_iniciales.txt")
+        vector = Vector(mallaInicial.retornar_malla())
+        
     # Mostrar información de la malla
-    print("=== Información de la Malla ===")
-    malla.mostrar_malla()
-    
-    # Guardar la matriz en un archivo de texto
-    print("\n=== Guardando Matriz ===")
-    malla.guardar_matriz_txt("matriz_valores_iniciales.txt")
+    #print("=== Información de la Malla ===")
+    #mallaInicial.mostrar_malla()   
     
     # Visualizar la malla con colores
     print("\n=== Visualización de la Malla ===")
-    malla.visualizar_malla(
+    """malla.visualizar_malla(
         titulo="Malla de Simulación - Análisis de fluido laminar",
         guardar=True,
         nombre_archivo="malla_simulacion.png",
         mostrar_numeros=True
     )
-    
-    # Ejemplo de cómo cargar la matriz guardada
-    print("\n" + "="*50)
+    """
 
 if __name__ == "__main__":
     main()
