@@ -395,10 +395,10 @@ class Vector_evaluado:
             
                         # Obtener valores vecinos
                     X_ij = self.vector.x0[indice]
-                    X_i_j_plus_1 = self.vector.x0[i * self.columnas + (j + 1)] if j + 1 < self.columnas else 0
-                    X_i_j_minus_1 = self.vector.x0[i * self.columnas + (j - 1)] if j - 1 >= 0 else 0
-                    X_i_minus_1_j = self.vector.x0[(i - 1) * self.columnas + j] if i - 1 >= 0 else 0
-                    X_i_plus_1_j = self.vector.x0[(i + 1) * self.columnas + j] if i + 1 < self.filas else 0
+                    X_i_j_plus_1 = self.vector.x0[i * self.columnas + (j + 1)]
+                    X_i_j_minus_1 = self.vector.x0[i * self.columnas + (j - 1)]
+                    X_i_minus_1_j = self.vector.x0[(i - 1) * self.columnas + j]
+                    X_i_plus_1_j = self.vector.x0[(i + 1) * self.columnas + j]
                         
                         # Evaluar la ecuación
                     self.vector_evaluado[indice] = self.evaluar_ecuacion(
