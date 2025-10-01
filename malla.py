@@ -14,10 +14,10 @@ class Bloque:
 
     def procesar_bloque_en_malla(self, h, Ny):
         self.i0 = int(self.x0 / h)
-        self.j0 =   abs(int(np.ceil(self.y0 / h)) - (Ny+1))
+        self.j0 = int(self.y0 / h)
         print("y0 ", self.y0,  "j0 ", self.j0)
         self.in_fin = int(self.xn / h)
-        self.jn_fin = abs(int(np.ceil(self.yn / h)) - (Ny+1))
+        self.jn_fin = int(self.yn / h)
         print("yn ", self.yn,  "jn_fin ", self.jn_fin)
         return self.i0, self.j0, self.in_fin, self.jn_fin
 
@@ -57,10 +57,10 @@ class Malla:
     def __establecer_condiciones_de_frontera(self):
         """Método privado: Establece condiciones iniciales"""
         self.malla[:,0] = self.v0
-        self.malla[0,:(self.bloqueSuperior.i0)] = self.v0
-        self.malla[0,(self.bloqueSuperior.i0):]=0
+        self.malla[0,:] = 0
+        self.malla[self.Ny+1,(self.bloqueSuperior.i0):]=0
         self.malla[:,self.Nx+1] = 0
-        self.malla[self.Ny+1,:] = 0
+        self.malla[self.Ny+1,:(self.bloqueSuperior.i0)] = self.v0
         
     def __procesar_bloques(self):
         self.bloqueSuperior.procesar_bloque_en_malla(self.h, self.Ny)
@@ -72,8 +72,8 @@ class Malla:
     def __aplicar_bloque(self):
         """Método privado: Aplica un bloque específico"""
         # Convertir coordenadas a índices
-        self.malla[self.bloqueSuperior.jn_fin:self.bloqueSuperior.j0+1, self.bloqueSuperior.i0:self.bloqueSuperior.in_fin+1] = 0
-        self.malla[self.bloqueInferior.jn_fin:self.bloqueInferior.j0+1, self.bloqueInferior.i0:self.bloqueInferior.in_fin+1] = 0
+        self.malla[self.bloqueSuperior.j0:self.bloqueSuperior.jn_fin+1, self.bloqueSuperior.i0:self.bloqueSuperior.in_fin+1] = 0
+        self.malla[self.bloqueInferior.j0:self.bloqueInferior.jn_fin+1, self.bloqueInferior.i0:self.bloqueInferior.in_fin+1] = 0
         print("x, superior ",self.bloqueSuperior.i0, self.bloqueSuperior.in_fin+1, "y ",self.bloqueSuperior.j0, self.bloqueSuperior.jn_fin+1)
         print("x, inferior",self.bloqueInferior.i0, self.bloqueInferior.in_fin+1, "y ",self.bloqueInferior.j0, self.bloqueInferior.jn_fin+1)
      
@@ -133,30 +133,30 @@ class Malla:
         tamaño_vertical = self.Ny / divisionesVerticales
         pasoH = 1 / (2 * divisionesHorizontales)  # Si son 10 divisiones, de tamaño 5 cuadritos para malla de Nx=50,el paso = 1/20 = 0.05
         pasoV = 1 / (2 * divisionesVerticales)  # Si son 5 divisiones, de tamaño 1 cuadrito para malla de Ny=5,el paso = 1/10 = 0.1
-        # Generar lista de 1 a 0 con paso preciso
-        lista_horizontal = np.append(np.arange(0.95,0,-pasoH), 0)
-        lista_vertical = np.append(np.arange(0.9, 0,-pasoV), 0)
+        # Generar lista de 0 a 1 con paso preciso
+        lista_horizontal = np.append(np.arange(0, 0.95, pasoH), 0.95)
+        lista_vertical = np.append(np.arange(0, 0.9, pasoV), 0.9)
         
 
-        k=1
-        m=1
-        count_i=1
+        k = len(lista_vertical) - 1
+        m = len(lista_horizontal) - 1
+        count_i = self.Ny
         print("lista_horizontal ", lista_horizontal)
         print("lista_vertical ", lista_vertical)
-        for i in range(1, self.Ny+1):
+        for i in range(self.Ny, 0, -1):
             for j in range(1,self.Nx+1):
                 
                 print("j % tamaño_horizontal ", j % tamaño_horizontal, "tamaño_horizontal-1 ", tamaño_horizontal-1)    
                 if i  != count_i:
-                    count_i += 1
-                    k += 2
+                    count_i -= 1
+                    k -= 2
 
                 
                 if j % tamaño_horizontal  == 1: 
                     if(j==1):
-                        m = 1
+                        m = len(lista_horizontal) - 1
                     else:
-                        m += 2
+                        m -= 2
 
                     
                 
@@ -191,7 +191,7 @@ class Malla:
         
         # Usar imshow para los colores con extent correcto
         # La matriz es 7×52, así que extent debe ser [0, 52, 0, 7]
-        im = ax.imshow(self.malla, cmap='viridis', origin='upper', 
+        im = ax.imshow(self.malla, cmap='viridis', 
                       extent=[0, 52, 0, 7], aspect='equal')
         
         # Agregar valores numéricos en cada celda (opcional)
@@ -352,16 +352,16 @@ class MatrizJacobiana:
                     or fila == 0                       # borde superior
                     or columna == 51                   # borde derecho
                     or fila == 6                       # borde inferior
-                    or (37 <= columna <= 51 and 1 <= fila <= 2)   # bloque superior
-                    or (22 <= columna <= 30 and 4 <= fila <= 5)   # bloque inferior
+                    or (37 <= columna <= 51 and 4 <= fila <= 5)   # bloque superior
+                    or (22 <= columna <= 30 and 1 <= fila <= 2)   # bloque inferior
                 ):
                   self.jacobiana[i, i] = 1
               else:
                   self.jacobiana[i, i] = -1 - vectorValoresIniciales[i+1] + vectorValoresIniciales[i-1]
                   self.jacobiana[i, i+1] = (1/4) - vectorValoresIniciales[i]
                   self.jacobiana[i, i-1] = (1/4) + vectorValoresIniciales[i]
-                  self.jacobiana[i, i+52] = (1/4) + vorticidad
-                  self.jacobiana[i, i-52] = (1/4) - vorticidad
+                  self.jacobiana[i, i-52] = (1/4) + vorticidad
+                  self.jacobiana[i, i+52] = (1/4) - vorticidad
 
         print("Matriz jacobiana construida completamente")
     
@@ -435,7 +435,7 @@ class MatrizJacobiana:
           
 
 class Vector_evaluado:
-    def _init_(self, vector, malla, Vy):
+    def __init__(self, vector, malla, Vy):
         """
         Inicializa el evaluador de vector
         
@@ -473,7 +473,7 @@ class Vector_evaluado:
         resultado = -X_ij + (1/4) * (
             X_i_j_plus_1 + X_i_j_minus_1 + X_i_minus_1_j + X_i_plus_1_j
             - 4 * X_ij * (X_i_j_plus_1 - X_i_j_minus_1)
-            - 4 * self.Vy * (X_i_minus_1_j - X_i_plus_1_j)
+            - 4 * self.Vy * (X_i_plus_1_j - X_i_minus_1_j)
         )
         return resultado
         
@@ -488,13 +488,13 @@ class Vector_evaluado:
         Returns:
             bool: True si está en un bloque, False en caso contrario
         """
-         # Verificar bloque superior
-        if (self.malla.bloqueSuperior.jn_fin <= i <= self.malla.bloqueSuperior.j0 and
+         # Verificar bloque superior (ahora en filas altas)
+        if (self.malla.bloqueSuperior.j0 <= i <= self.malla.bloqueSuperior.jn_fin and
             self.malla.bloqueSuperior.i0 <= j <= self.malla.bloqueSuperior.in_fin):
             return True
             
-        # Verificar bloque inferior
-        if (self.malla.bloqueInferior.jn_fin <= i <= self.malla.bloqueInferior.j0 and
+        # Verificar bloque inferior (ahora en filas bajas)
+        if (self.malla.bloqueInferior.j0 <= i <= self.malla.bloqueInferior.jn_fin and
             self.malla.bloqueInferior.i0 <= j <= self.malla.bloqueInferior.in_fin):
             return True
             
@@ -512,27 +512,30 @@ class Vector_evaluado:
         
         for i in range(self.filas):
             for j in range(self.columnas):
-                indice = i * self.columnas + j
+                # Mapeo invertido: fila 0 (abajo) -> índice alto, fila 6 (arriba) -> índice bajo
+                indice = i * 52 + j
                 
                 # Condiciones de frontera
-                if i == 0 and j < self.malla.bloqueSuperior.i0:
+                if i == 6 and j < self.malla.bloqueSuperior.i0:
                     # Frontera superior antes del bloque superior
                     self.vector_evaluado[indice] = 1.0
+                    print("abajo antes de bloque superior", i, j, indice)
 
-                elif i == 0 and j >= self.malla.bloqueSuperior.i0:
+                elif i == 6 and j >= self.malla.bloqueSuperior.i0:
                     #frontera arriba del bloque superior
                     self.vector_evaluado[indice] = 0.0
 
-                elif j == 0:
+                elif j == 0 and i != 0:
                     # Frontera izquierda
                     self.vector_evaluado[indice] = 1.0
-                elif i == 6:  # i == Ny+1 (6)
+                elif i == 0:  # i == Ny+1 (6)
                     # Frontera inferior
                     self.vector_evaluado[indice] = 0.0
                 elif j == 51:  # j == Nx+1 (51)
                     # Frontera derecha
                     self.vector_evaluado[indice] = 0.0
-                elif self.esta_en_bloque(i, j):
+                elif((37 <= j <= 51 and 4 <= i <= 5) or
+                     (22 <= j <= 30 and 1 <= i <= 2)) :
                     # Dentro de los bloques
                     self.vector_evaluado[indice] = 0.0
                 else:
@@ -598,7 +601,6 @@ def main():
     # Mostrar información de la malla
     #print("=== Información de la Malla ===")
     #mallaInicial.mostrar_malla()   
-    
     # Visualizar la malla con colores
     print("\n=== Visualización de la Malla ===")
     mallaInicial.visualizar_malla(
@@ -618,6 +620,7 @@ def main():
     
     
     # Opciones para visualizar la matriz jacobiana
+    
     print("\n=== OPCIONES PARA VER LA MATRIZ JACOBIANA ===")
     print("1. Para ver estadísticas de la matriz:")
     matrizJacobiana.mostrar_estadisticas_jacobiana()
@@ -638,6 +641,7 @@ def main():
         guardar=True,
         nombre_archivo="jacobiana_visualizacion.png"
     )
+    
 
 if __name__ == "__main__":
     main()
