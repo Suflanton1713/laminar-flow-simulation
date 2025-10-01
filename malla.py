@@ -33,6 +33,9 @@ class Malla:
         self.Ny = int(Ly/h)
         print("Nx ", self.Nx, "Ny ", self.Ny)
         
+        # Procesar bloques siempre (necesario para las coordenadas)
+        self.__procesar_bloques()
+        
         # Si se proporciona una matriz inicial, usarla directamente
         if matriz_inicial is not None:
             self.malla = matriz_inicial.copy()
@@ -40,7 +43,6 @@ class Malla:
         else:
             # Proceso normal de generación de malla
             self.__crear_malla()
-            self.__procesar_bloques()
             self.__establecer_condiciones_de_frontera()
             self.valores_aleatorios_dentro_de_malla(divisionesHorizontales, divisionesVerticales)
             self.__aplicar_bloque()
@@ -59,7 +61,7 @@ class Malla:
         self.malla[0,(self.bloqueSuperior.i0):]=0
         self.malla[:,self.Nx+1] = 0
         self.malla[self.Ny+1,:] = 0
-            
+        
     def __procesar_bloques(self):
         self.bloqueSuperior.procesar_bloque_en_malla(self.h, self.Ny)
         self.bloqueInferior.procesar_bloque_en_malla(self.h, self.Ny)
@@ -78,6 +80,9 @@ class Malla:
         """Método público: Muestra la malla"""
         print("Malla actual:")
         print(self.malla)
+
+    def retornar_malla(self):
+        return self.malla
     
     def obtener_valor(self, x, y):
         """Método público: Obtiene valor en coordenadas específicas"""
@@ -268,6 +273,147 @@ class Malla:
         print(f"Valor mínimo: {self.malla.min():.3f}")
         print(f"Valor máximo: {self.malla.max():.3f}")
         print(f"Valor promedio: {self.malla.mean():.3f}")
+    
+class Vector:
+    def __init__(self, matrizMalla):
+        self.x0 = np.zeros(matrizMalla.shape[0]*matrizMalla.shape[1])
+        #print("filas ", matrizMalla.shape[0], "columnas ", matrizMalla.shape[1])
+        for i in range(matrizMalla.shape[0]):
+            for j in range(matrizMalla.shape[1]):
+                self.x0[i*matrizMalla.shape[1]+j] = matrizMalla[i, j]
+        
+    def retornar_vector(self):
+        return self.x0
+    
+    def mostrar_vector(self):
+        print("x0 ", self.x0)
+
+
+class Vector_evaluado:
+    def __init__(self, vector, malla, Vy):
+        """
+        Inicializa el evaluador de vector
+        
+        Args:
+            vector: Objeto Vector con el vector x0
+            malla: Objeto Malla para obtener información de bloques
+            Vy: Valor de vorticidad
+        """
+        self.vector = vector
+        self.malla = malla
+        self.Vy = Vy
+        self.filas = malla.malla.shape[0]  # 7
+        self.columnas = malla.malla.shape[1]  # 52
+        
+    def evaluar_ecuacion(self, X_ij, X_i_j_plus_1, X_i_j_minus_1, X_i_minus_1_j, X_i_plus_1_j):
+        """
+        Evalúa la ecuación: 0 = - X_{i*52+j} + (1/4) * (
+            X_{i*52+(j+1)} + X_{i*52+(j-1)} + X_{(i-1)*52+j} + X_{(i+1)*52+j}
+            - 4 * X_{i*52+j} * [X_{i*52+(j+1)} - X_{i*52+(j-1)}]
+            - 4 * V_y * [X_{(i-1)*52+j} - X_{(i+1)*52+j}]
+        )
+        
+        Args:
+
+            valores en posicion de la malla:
+            X_ij: Valor en posición (i,j)
+            X_i_j_plus_1: Valor en posición (i,j+1) 
+            X_i_j_minus_1: Valor en posición (i,j-1)
+            X_i_minus_1_j: Valor en posición (i-1,j)
+            X_i_plus_1_j: Valor en posición (i+1,j)
+
+        Returns:
+            float: Resultado de la evaluación de la ecuación
+        """
+        resultado = -X_ij + (1/4) * (
+            X_i_j_plus_1 + X_i_j_minus_1 + X_i_minus_1_j + X_i_plus_1_j
+            - 4 * X_ij * (X_i_j_plus_1 - X_i_j_minus_1)
+            - 4 * self.Vy * (X_i_minus_1_j - X_i_plus_1_j)
+        )
+        return resultado
+        
+    def esta_en_bloque(self, i, j):
+        """
+        Verifica si la posición (i,j) está dentro de un bloque
+        
+        Args:
+            i: índice de fila
+            j: índice de columna
+            
+        Returns:
+            bool: True si está en un bloque, False en caso contrario
+        """
+         # Verificar bloque superior
+        if (self.malla.bloqueSuperior.jn_fin <= i <= self.malla.bloqueSuperior.j0 and
+            self.malla.bloqueSuperior.i0 <= j <= self.malla.bloqueSuperior.in_fin):
+            return True
+            
+        # Verificar bloque inferior
+        if (self.malla.bloqueInferior.jn_fin <= i <= self.malla.bloqueInferior.j0 and
+            self.malla.bloqueInferior.i0 <= j <= self.malla.bloqueInferior.in_fin):
+            return True
+            
+        return False
+    
+    def evaluar_vector_completo(self):
+        """
+        Evalúa el vector completo aplicando la ecuación en cada punto
+        considerando las condiciones de frontera
+        
+        Returns:
+            numpy.ndarray: Vector evaluado
+        """
+        self.vector_evaluado = np.zeros_like(self.vector.x0)
+        
+        for i in range(self.filas):
+            for j in range(self.columnas):
+                indice = i * self.columnas + j
+                
+                # Condiciones de frontera
+                if i == 0 and j < self.malla.bloqueSuperior.i0:
+                    # Frontera superior antes del bloque superior
+                    self.vector_evaluado[indice] = 1.0
+
+                elif i == 0 and j >= self.malla.bloqueSuperior.i0:
+                    #frontera arriba del bloque superior
+                    self.vector_evaluado[indice] = 0.0
+
+                elif j == 0:
+                    # Frontera izquierda
+                    self.vector_evaluado[indice] = 1.0
+                elif i == 6:  # i == Ny+1 (6)
+                    # Frontera inferior
+                    self.vector_evaluado[indice] = 0.0
+                elif j == 51:  # j == Nx+1 (51)
+                    # Frontera derecha
+                    self.vector_evaluado[indice] = 0.0
+                elif self.esta_en_bloque(i, j):
+                    # Dentro de los bloques
+                    self.vector_evaluado[indice] = 0.0
+                else:
+                    # Aplicar la ecuación para el resto de puntos
+            
+                        # Obtener valores vecinos
+                    X_ij = self.vector.x0[indice]
+                    X_i_j_plus_1 = self.vector.x0[i * self.columnas + (j + 1)] if j + 1 < self.columnas else 0
+                    X_i_j_minus_1 = self.vector.x0[i * self.columnas + (j - 1)] if j - 1 >= 0 else 0
+                    X_i_minus_1_j = self.vector.x0[(i - 1) * self.columnas + j] if i - 1 >= 0 else 0
+                    X_i_plus_1_j = self.vector.x0[(i + 1) * self.columnas + j] if i + 1 < self.filas else 0
+                        
+                        # Evaluar la ecuación
+                    self.vector_evaluado[indice] = self.evaluar_ecuacion(
+                        X_ij, X_i_j_plus_1, X_i_j_minus_1, X_i_minus_1_j, X_i_plus_1_j
+                    )
+                    
+        
+        return self.vector_evaluado
+    
+    
+    def mostrar_vector_evaluado(self):
+        """
+        Muestra el vector evaluado de manera sencilla
+        """
+        print("F(xi):", self.vector_evaluado)
 
 
 def main():
@@ -278,31 +424,44 @@ def main():
     # Cargar matriz desde archivo
     if os.path.exists("matriz_valores_iniciales.txt"):
         matriz_cargada = np.loadtxt("matriz_valores_iniciales.txt", delimiter='\t')
+        mallaInicial = Malla(400, 40, 8, 1, bloqueSuperior, bloqueInfierior, 10, 5, matriz_inicial=matriz_cargada)
+        vector = Vector(mallaInicial.retornar_malla())
+        print("=== Vector Original ===")
+        vector.mostrar_vector()
     else:
         matriz_cargada = None
+        mallaInicial = Malla(400, 40, 8, 1, bloqueSuperior, bloqueInfierior, 10, 5, matriz_inicial=matriz_cargada)
+        # Guardar la matriz en un archivo de texto
+        mallaInicial.guardar_matriz_txt("matriz_valores_iniciales.txt")
+        vector = Vector(mallaInicial.retornar_malla())
+        print("=== Vector Original ===")
+        vector.mostrar_vector()
     
-    # Crear malla
-    malla = Malla(400, 40, 8, 1, bloqueSuperior, bloqueInfierior, 10, 5, matriz_inicial=matriz_cargada)
+    # evaluador de vector con vorticidad Vy 
+    Vy = 0.1
+    evaluador = Vector_evaluado(vector, mallaInicial, Vy)
+    
+    print(f"\n=== Evaluación del Vector con Vorticidad Vy = {Vy} ===")
+    vector_evaluado = evaluador.evaluar_vector_completo()
+    
+    # Mostrar resultados usando el método sencillo
+    evaluador.mostrar_vector_evaluado()
+   
+    
     
     # Mostrar información de la malla
-    print("=== Información de la Malla ===")
-    malla.mostrar_malla()
-    
-    # Guardar la matriz en un archivo de texto
-    print("\n=== Guardando Matriz ===")
-    malla.guardar_matriz_txt("matriz_valores_iniciales.txt")
+    #print("=== Información de la Malla ===")
+    #mallaInicial.mostrar_malla()   
     
     # Visualizar la malla con colores
     print("\n=== Visualización de la Malla ===")
-    malla.visualizar_malla(
+    """malla.visualizar_malla(
         titulo="Malla de Simulación - Análisis de fluido laminar",
         guardar=True,
         nombre_archivo="malla_simulacion.png",
         mostrar_numeros=True
     )
-    
-    # Ejemplo de cómo cargar la matriz guardada
-    print("\n" + "="*50)
+    """
 
 if __name__ == "__main__":
     main()
