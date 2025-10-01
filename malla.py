@@ -1,6 +1,4 @@
-from mimetypes import init
 import random as random
-from re import X
 import numpy as np
 np.set_printoptions(suppress=True, precision=2)
 import matplotlib.pyplot as plt
