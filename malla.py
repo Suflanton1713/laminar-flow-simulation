@@ -65,6 +65,8 @@ class Malla:
     def __procesar_bloques(self):
         self.bloqueSuperior.procesar_bloque_en_malla(self.h, self.Ny)
         self.bloqueInferior.procesar_bloque_en_malla(self.h, self.Ny)
+        print("bloque superior ", self.bloqueSuperior.i0, self.bloqueSuperior.in_fin+1, "y ",self.bloqueSuperior.j0, self.bloqueSuperior.jn_fin+1)
+        print("bloque inferior ", self.bloqueInferior.i0, self.bloqueInferior.in_fin+1, "y ",self.bloqueInferior.j0, self.bloqueInferior.jn_fin+1)
         
         
     def __aplicar_bloque(self):
@@ -287,13 +289,278 @@ class Vector:
     
     def mostrar_vector(self):
         print("x0 ", self.x0)
+    
+    def visualizar_vector_como_mapa_calor_1d(self, titulo="Vector como Mapa de Calor 1D", guardar=False, nombre_archivo="vector_mapa_calor_1d.png"):
+        """
+        Visualiza el vector como un mapa de calor 1D (barra de colores)
+        
+        Args:
+            titulo (str): Título de la gráfica
+            guardar (bool): Si True, guarda la imagen
+            nombre_archivo (str): Nombre del archivo a guardar
+        """
+        fig, ax = plt.subplots(figsize=(16, 4))
+        
+        # Crear mapa de calor 1D
+        im = ax.imshow(self.x0.reshape(1, -1), cmap='viridis', aspect='auto', 
+                      extent=[0, len(self.x0), 0, 1])
+        
+        # Configurar ejes
+        ax.set_xlabel('Índice del Vector', fontsize=14, fontweight='bold')
+        ax.set_ylabel('', fontsize=14, fontweight='bold')
+        ax.set_title(titulo, fontsize=16, fontweight='bold', pad=20)
+        
+        # Configurar ticks
+        ax.tick_params(axis='both', which='major', labelsize=12)
+        ax.set_yticks([])  # Ocultar ticks del eje Y
+        
+        # Configurar barra de colores
+        cbar = plt.colorbar(im, ax=ax, orientation='horizontal', shrink=0.8, aspect=30)
+        cbar.set_label('Valor', fontsize=12)
+        cbar.ax.tick_params(labelsize=10)
+        
+        # Mostrar estadísticas
+        stats_text = f'Longitud: {len(self.x0)} | Min: {self.x0.min():.3f} | Max: {self.x0.max():.3f} | Promedio: {self.x0.mean():.3f}'
+        ax.text(0.02, 0.5, stats_text, transform=ax.transAxes, 
+                verticalalignment='center', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8),
+                fontsize=10)
+        
+        plt.tight_layout()
+        
+        if guardar:
+            plt.savefig(nombre_archivo, dpi=300, bbox_inches='tight')
+            print(f"Mapa de calor 1D del vector guardado como: {nombre_archivo}")
+        
+        plt.show()
 
 
 
     def __str__(self):
         return f"Vector({self.x}, {self.y})"
 
+class MatrizJacobiana:
+    def __init__(self, vectorValoresIniciales, vorticidad = 5):
+        self.jacobiana = np.zeros((vectorValoresIniciales.shape[0], vectorValoresIniciales.shape[0]))
+        print("Inicializando matriz jacobiana de tamaño:", self.jacobiana.shape)
+        print("vectorValoresIniciales ", vectorValoresIniciales.shape[0])
+        for i in range(self.jacobiana.shape[0]):
+              fila = i // 52      # número de bloque (cada 52 elementos)
+              columna = i % 52    # posición dentro del bloque
 
+              if (
+                    columna == 0                       # borde izquierdo
+                    or fila == 0                       # borde superior
+                    or columna == 51                   # borde derecho
+                    or fila == 6                       # borde inferior
+                    or (37 <= columna <= 51 and 1 <= fila <= 2)   # bloque superior
+                    or (22 <= columna <= 30 and 4 <= fila <= 5)   # bloque inferior
+                ):
+                  self.jacobiana[i, i] = 1
+              else:
+                  self.jacobiana[i, i] = -1 - vectorValoresIniciales[i+1] + vectorValoresIniciales[i-1]
+                  self.jacobiana[i, i+1] = (1/4) - vectorValoresIniciales[i]
+                  self.jacobiana[i, i-1] = (1/4) + vectorValoresIniciales[i]
+                  self.jacobiana[i, i+52] = (1/4) + vorticidad
+                  self.jacobiana[i, i-52] = (1/4) - vorticidad
+
+        print("Matriz jacobiana construida completamente")
+    
+    def mostrar_jacobiana_completa(self, guardar_txt=True, nombre_archivo="matriz_jacobiana_completa.txt"):
+        """Muestra la matriz jacobiana completa sin truncar y opcionalmente la guarda en txt"""
+        # Configurar NumPy para mostrar toda la matriz
+        with np.printoptions(threshold=np.inf, linewidth=np.inf, suppress=True, precision=3):
+            print("=== MATRIZ JACOBIANA COMPLETA ===")
+            print(self.jacobiana)
+        
+        # Guardar automáticamente en archivo txt si se solicita
+        if guardar_txt:
+            try:
+                np.savetxt(nombre_archivo, self.jacobiana, fmt='%.8f', delimiter='\t')
+                print(f"\nMatriz jacobiana completa guardada automáticamente en: {nombre_archivo}")
+                print(f"Dimensiones: {self.jacobiana.shape[0]} filas x {self.jacobiana.shape[1]} columnas")
+            except Exception as e:
+                print(f"Error al guardar la matriz jacobiana: {e}")
+    
+    def mostrar_estadisticas_jacobiana(self):
+        """Muestra estadísticas de la matriz jacobiana"""
+        print("\n=== ESTADÍSTICAS DE LA MATRIZ JACOBIANA ===")
+        print(f"Dimensiones: {self.jacobiana.shape}")
+        print(f"Valor mínimo: {self.jacobiana.min():.6f}")
+        print(f"Valor máximo: {self.jacobiana.max():.6f}")
+        print(f"Valor promedio: {self.jacobiana.mean():.6f}")
+        print(f"Elementos no cero: {np.count_nonzero(self.jacobiana)}")
+        print(f"Porcentaje de elementos no cero: {(np.count_nonzero(self.jacobiana) / self.jacobiana.size) * 100:.2f}%")
+    
+    def mostrar_submatriz(self, fila_inicio=0, fila_fin=10, col_inicio=0, col_fin=10):
+        """Muestra una submatriz de la jacobiana"""
+        print(f"\n=== SUBMATRIZ [{fila_inicio}:{fila_fin}, {col_inicio}:{col_fin}] ===")
+        submatriz = self.jacobiana[fila_inicio:fila_fin, col_inicio:col_fin]
+        with np.printoptions(suppress=True, precision=3):
+            print(submatriz)
+    
+    def guardar_jacobiana_txt(self, nombre_archivo="matriz_jacobiana.txt"):
+        """Guarda la matriz jacobiana en un archivo de texto"""
+        try:
+            np.savetxt(nombre_archivo, self.jacobiana, fmt='%.8f', delimiter='\t')
+            print(f"Matriz jacobiana guardada en: {nombre_archivo}")
+        except Exception as e:
+            print(f"Error al guardar la matriz jacobiana: {e}")
+    
+    def visualizar_jacobiana(self, titulo="Matriz Jacobiana", guardar=False, nombre_archivo="jacobiana.png"):
+        """Visualiza la matriz jacobiana como una imagen de calor"""
+        fig, ax = plt.subplots(figsize=(12, 10))
+        
+        # Crear mapa de calor
+        im = ax.imshow(self.jacobiana, cmap='RdBu_r', aspect='equal')
+        
+        # Configurar barra de colores
+        cbar = plt.colorbar(im, ax=ax, shrink=0.8)
+        cbar.set_label('Valor', rotation=270, labelpad=20)
+        
+        # Configurar ejes
+        ax.set_xlabel('Índice de Columna', fontsize=12)
+        ax.set_ylabel('Índice de Fila', fontsize=12)
+        ax.set_title(titulo, fontsize=14, fontweight='bold')
+        
+        # Configurar ticks
+        ax.tick_params(axis='both', which='major', labelsize=10)
+        
+        plt.tight_layout()
+        
+        if guardar:
+            plt.savefig(nombre_archivo, dpi=300, bbox_inches='tight')
+            print(f"Visualización guardada como: {nombre_archivo}")
+        
+        plt.show()
+          
+
+class Vector_evaluado:
+    def _init_(self, vector, malla, Vy):
+        """
+        Inicializa el evaluador de vector
+        
+        Args:
+            vector: Objeto Vector con el vector x0
+            malla: Objeto Malla para obtener información de bloques
+            Vy: Valor de vorticidad
+        """
+        self.vector = vector
+        self.malla = malla
+        self.Vy = Vy
+        self.filas = malla.malla.shape[0]  # 7
+        self.columnas = malla.malla.shape[1]  # 52
+        
+    def evaluar_ecuacion(self, X_ij, X_i_j_plus_1, X_i_j_minus_1, X_i_minus_1_j, X_i_plus_1_j):
+        """
+        Evalúa la ecuación: 0 = - X_{i*52+j} + (1/4) * (
+            X_{i*52+(j+1)} + X_{i*52+(j-1)} + X_{(i-1)*52+j} + X_{(i+1)*52+j}
+            - 4 * X_{i*52+j} * [X_{i*52+(j+1)} - X_{i*52+(j-1)}]
+            - 4 * V_y * [X_{(i-1)*52+j} - X_{(i+1)*52+j}]
+        )
+        
+        Args:
+
+            valores en posicion de la malla:
+            X_ij: Valor en posición (i,j)
+            X_i_j_plus_1: Valor en posición (i,j+1) 
+            X_i_j_minus_1: Valor en posición (i,j-1)
+            X_i_minus_1_j: Valor en posición (i-1,j)
+            X_i_plus_1_j: Valor en posición (i+1,j)
+
+        Returns:
+            float: Resultado de la evaluación de la ecuación
+        """
+        resultado = -X_ij + (1/4) * (
+            X_i_j_plus_1 + X_i_j_minus_1 + X_i_minus_1_j + X_i_plus_1_j
+            - 4 * X_ij * (X_i_j_plus_1 - X_i_j_minus_1)
+            - 4 * self.Vy * (X_i_minus_1_j - X_i_plus_1_j)
+        )
+        return resultado
+        
+    def esta_en_bloque(self, i, j):
+        """
+        Verifica si la posición (i,j) está dentro de un bloque
+        
+        Args:
+            i: índice de fila
+            j: índice de columna
+            
+        Returns:
+            bool: True si está en un bloque, False en caso contrario
+        """
+         # Verificar bloque superior
+        if (self.malla.bloqueSuperior.jn_fin <= i <= self.malla.bloqueSuperior.j0 and
+            self.malla.bloqueSuperior.i0 <= j <= self.malla.bloqueSuperior.in_fin):
+            return True
+            
+        # Verificar bloque inferior
+        if (self.malla.bloqueInferior.jn_fin <= i <= self.malla.bloqueInferior.j0 and
+            self.malla.bloqueInferior.i0 <= j <= self.malla.bloqueInferior.in_fin):
+            return True
+            
+        return False
+    
+    def evaluar_vector_completo(self):
+        """
+        Evalúa el vector completo aplicando la ecuación en cada punto
+        considerando las condiciones de frontera
+        
+        Returns:
+            numpy.ndarray: Vector evaluado
+        """
+        self.vector_evaluado = np.zeros_like(self.vector.x0)
+        
+        for i in range(self.filas):
+            for j in range(self.columnas):
+                indice = i * self.columnas + j
+                
+                # Condiciones de frontera
+                if i == 0 and j < self.malla.bloqueSuperior.i0:
+                    # Frontera superior antes del bloque superior
+                    self.vector_evaluado[indice] = 1.0
+
+                elif i == 0 and j >= self.malla.bloqueSuperior.i0:
+                    #frontera arriba del bloque superior
+                    self.vector_evaluado[indice] = 0.0
+
+                elif j == 0:
+                    # Frontera izquierda
+                    self.vector_evaluado[indice] = 1.0
+                elif i == 6:  # i == Ny+1 (6)
+                    # Frontera inferior
+                    self.vector_evaluado[indice] = 0.0
+                elif j == 51:  # j == Nx+1 (51)
+                    # Frontera derecha
+                    self.vector_evaluado[indice] = 0.0
+                elif self.esta_en_bloque(i, j):
+                    # Dentro de los bloques
+                    self.vector_evaluado[indice] = 0.0
+                else:
+                    # Aplicar la ecuación para el resto de puntos
+            
+                        # Obtener valores vecinos
+                    X_ij = self.vector.x0[indice]
+                    X_i_j_plus_1 = self.vector.x0[i * self.columnas + (j + 1)]
+                    X_i_j_minus_1 = self.vector.x0[i * self.columnas + (j - 1)]
+                    X_i_minus_1_j = self.vector.x0[(i - 1) * self.columnas + j]
+                    X_i_plus_1_j = self.vector.x0[(i + 1) * self.columnas + j]
+                        
+                        # Evaluar la ecuación
+                    self.vector_evaluado[indice] = self.evaluar_ecuacion(
+                        X_ij, X_i_j_plus_1, X_i_j_minus_1, X_i_minus_1_j, X_i_plus_1_j
+                    )
+                    
+        
+        return self.vector_evaluado
+    
+    
+    def mostrar_vector_evaluado(self):
+        """
+        Muestra el vector evaluado de manera sencilla
+        """
+        print("F(xi):", self.vector_evaluado)
+
+        
 def main():
     # Crear bloques
     bloqueSuperior = Bloque(296, 400, 32, 40)
@@ -304,13 +571,29 @@ def main():
         matriz_cargada = np.loadtxt("matriz_valores_iniciales.txt", delimiter='\t')
         mallaInicial = Malla(400, 40, 8, 1, bloqueSuperior, bloqueInfierior, 10, 5, matriz_inicial=matriz_cargada)
         vector = Vector(mallaInicial.retornar_malla())
-        vector.visualizar_vector()
+        print("=== Vector Original ===")
+        vector.mostrar_vector()
+        matrizJacobiana = MatrizJacobiana(vector.retornar_vector())
+    
     else:
         matriz_cargada = None
         mallaInicial = Malla(400, 40, 8, 1, bloqueSuperior, bloqueInfierior, 10, 5, matriz_inicial=matriz_cargada)
         # Guardar la matriz en un archivo de texto
         mallaInicial.guardar_matriz_txt("matriz_valores_iniciales.txt")
         vector = Vector(mallaInicial.retornar_malla())
+        print("=== Vector Original ===")
+        vector.mostrar_vector()
+        matrizJacobiana = MatrizJacobiana(vector.retornar_vector())
+    
+    # evaluador de vector con vorticidad Vy 
+    Vy = 0.1
+    evaluador = Vector_evaluado(vector, mallaInicial, Vy)
+    
+    print(f"\n=== Evaluación del Vector con Vorticidad Vy = {Vy} ===")
+    vector_evaluado = evaluador.evaluar_vector_completo()
+    
+    # Mostrar resultados usando el método sencillo
+    evaluador.mostrar_vector_evaluado()
         
     # Mostrar información de la malla
     #print("=== Información de la Malla ===")
@@ -318,13 +601,43 @@ def main():
     
     # Visualizar la malla con colores
     print("\n=== Visualización de la Malla ===")
-    """malla.visualizar_malla(
-        titulo="Malla de Simulación - Análisis de fluido laminar",
+    mallaInicial.visualizar_malla(
+        titulo="Malla de valores iniciales  - Análisis de fluido laminar",
         guardar=True,
-        nombre_archivo="malla_simulacion.png",
+        nombre_archivo="malla__valores_iniciales_simulacion.png",
         mostrar_numeros=True
     )
-    """
+    
+    # Visualizar el vector como mapa de calor 1D
+    print("\n=== Visualización del Vector ===")
+    vector.visualizar_vector_como_mapa_calor_1d(
+        titulo="Vector como Mapa de Calor 1D",
+        guardar=True,
+        nombre_archivo="vector_mapa_calor_1d.png"
+    )
+    
+    
+    # Opciones para visualizar la matriz jacobiana
+    print("\n=== OPCIONES PARA VER LA MATRIZ JACOBIANA ===")
+    print("1. Para ver estadísticas de la matriz:")
+    matrizJacobiana.mostrar_estadisticas_jacobiana()
+    
+    print("\n2. Para ver una submatriz (primeros 10x10 elementos):")
+    matrizJacobiana.mostrar_submatriz(0, 10, 0, 10)
+    
+    print("\n3. Para ver la matriz completa (¡CUIDADO! Es muy grande):")
+    print("   Descomenta la siguiente línea si quieres ver toda la matriz:")
+    matrizJacobiana.mostrar_jacobiana_completa()
+    
+    print("\n4. Para guardar la matriz en un archivo:")
+    matrizJacobiana.guardar_jacobiana_txt("matriz_jacobiana_completa.txt")
+    
+    print("\n5. Para visualizar la matriz como imagen:")
+    matrizJacobiana.visualizar_jacobiana(
+        titulo="Matriz Jacobiana - Visualización de Calor",
+        guardar=True,
+        nombre_archivo="jacobiana_visualizacion.png"
+    )
 
 if __name__ == "__main__":
     main()
