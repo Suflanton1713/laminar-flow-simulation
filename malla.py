@@ -386,6 +386,7 @@ def main():
     # Crear vector inicial
     xinit = Vector(mallaInicial.retornar_malla())
     
+    #visualizaciones de los valores iniciales
     print("\n=== Valores Iniciales ===")
     xinit.showPlotDetail(True)
     xinit.showPlot(True)
@@ -396,7 +397,7 @@ def main():
     
     # Método de Newton-Raphson
     max_iterations = 100
-    tolerance_residuo = 1e-10
+    tolerance_residuo = 1e-10 #Cambio entre iteraciones 
     tolerance_epsilon = 1e-8
     
     print("\n" + "="*50)
@@ -412,8 +413,8 @@ def main():
     
     for i in range(max_iterations):
         print(f"\nIteración: {i+1}")
-        xinit.cal_function(mallaInicial)
-        residuo_norm = np.linalg.norm(xinit.vectFunction)
+        xinit.cal_function(mallaInicial) #calcula F(X) para vector actual
+        residuo_norm = np.linalg.norm(xinit.vectFunction) #calcula la norma del residuo
         print(f"  Norma del residuo: {residuo_norm:.10e}")
         
         # Condición 1: Norma del residuo
@@ -423,7 +424,7 @@ def main():
             break
         
         xinit.cal_jacobiano(mallaInicial)
-        xinit.newVector()
+        xinit.newVector() #calcula xn+1 con metodo de newton raphson
         
         # Condición 2: Epsilon (cambio entre iteraciones)
         epsilon = np.linalg.norm(xinit.vec - vec_anterior)
