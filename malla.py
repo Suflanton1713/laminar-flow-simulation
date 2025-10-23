@@ -263,40 +263,83 @@ class Vector:
                     self.matrixJacobiana[ecuacion, idx-self.columnas] = (1/4) - v_ij
 
     def newVector(self, forma, jacobiana_SDP, vector_SDP, iteracion):
-        """Actualiza el vector usando Newton-Raphson"""
+        """
+        Actualiza el vector usando Newton-Raphson o Newton–Gauss con CG completo.
+        Incluye trazas detalladas del gradiente conjugado interno.
+        """
 
         if forma == "inversa":
             jacobiano_inv = np.linalg.inv(jacobiana_SDP)
-            xn = np.subtract(vector_SDP, np.matmul(jacobiano_inv, self.vectFunction))
+            xn = self.vec - np.matmul(jacobiano_inv, self.vectFunction)
             self.vec = xn
-        elif forma == "conjugado":
-            if iteracion == 0:
-                p0 = vector_SDP - np.dot(jacobiana_SDP, self.vectFunction)
-                print(f"  P0: {p0}")
-                r0 = p0.copy()
-                self.residuoPrevio = r0.copy()
-                self.direccionPrevia = p0.copy()
-                print(f"  R0: {r0}")
-                alpha0 = np.dot(r0.T, r0) / np.dot(p0.T, np.dot(jacobiana_SDP, p0))
-                print(f"  Alpha0: {alpha0}")
-                xn = vector_SDP + (alpha0 * p0)
-                self.vec = xn
-            else:
-                rk = vector_SDP - np.dot(jacobiana_SDP, self.vectFunction)
-                beta_k = - (np.dot(self.direccionPrevia.T, np.dot(jacobiana_SDP,rk)) / np.dot(self.direccionPrevia.T, np.dot(jacobiana_SDP, self.direccionPrevia)))
-                pk = rk + (beta_k * self.residuoPrevio)
-                self.residuoPrevio = rk.copy()
-                self.direccionPrevia = pk.copy()
-                alpha_k = np.dot(rk.T, pk) / np.dot(pk.T, np.dot(jacobiana_SDP, pk))
 
-                xn = vector_SDP + (alpha_k * pk)
-                self.vec = xn
-                
-            
+        elif forma == "conjugado":
+            # ===============================
+            # Sistema equivalente: A H = b
+            # ===============================
+            A = jacobiana_SDP              # Matriz simétrica definida positiva = JᵀJ
+            b = vector_SDP                 # Vector = -JᵀF
+
+            # Parámetros del gradiente conjugado
+            tol = 1e-10          # tolerancia interna
+            max_iter_cg = len(b) # número máximo de iteraciones (por defecto = tamaño del sistema)
+
+            # Inicialización del gradiente conjugado
+            H = np.zeros_like(b)           # x₀ = 0 → incremento inicial
+            r = b - A @ H                  # r₀ = b - A x₀ = b
+            v = r.copy()
+            c = np.dot(r.T, r)
+            norm0 = np.sqrt(c)
+
+            print("\n  === Inicio del gradiente conjugado ===")
+            print(f"  Norma inicial del residuo: {norm0:.3e}")
+            print(f"  Tolerancia relativa: {tol * norm0:.3e}\n")
+
+            # ===============================
+            # Ciclo interno de gradiente conjugado
+            # ===============================
+            for k in range(max_iter_cg):
+                Av = A @ v
+                denom = np.dot(v.T, Av)
+
+                if abs(denom) < 1e-14:
+                    print(f"  [CG] División por cero evitada en iteración {k+1} (A mal condicionada).")
+                    break
+
+                t = c / denom               # Paso t_k
+                H = H + t * v               # x_{k+1} = x_k + t v_k
+                r = r - t * Av              # r_{k+1} = r_k - t A v_k
+                d = np.dot(r.T, r)          # d = (r_{k+1}, r_{k+1})
+                norm_r = np.sqrt(d)
+
+                # Mostrar información por iteración
+                print(f"  Iter {k+1:02d} | t = {t:.3e} | (vᵀAv) = {denom:.3e} | ‖r‖ = {norm_r:.3e}")
+
+                # Verificar convergencia
+                if norm_r < tol * norm0:
+                    print(f"  [CG] ✅ Convergió en {k+1} iteraciones (‖r‖ = {norm_r:.3e})")
+                    break
+
+                s = d / c                   # s_k = d/c
+                v = r + s * v               # v_{k+1} = r_{k+1} + s v_k
+                c = d                       # c ← d
+
+            # Guardar el incremento convergente como paso de Newton
+            self.vecIncremento = H
+
+            print("  === Fin del gradiente conjugado ===\n")
+
+            # ===============================
+            # Actualización de Newton
+            # ===============================
+            self.vec = self.vec + self.vecIncremento
+
         else:
             delta_x = np.linalg.solve(self.matrixJacobiana, self.vectFunction)
             xn = self.vec - delta_x
             self.vec = xn
+
+
 
         
 
@@ -440,11 +483,22 @@ def main():
         cond = np.linalg.cond(xinit.matrixJacobiana,2)
         print(f"  Condición de la Jacobiana: {cond}")
 
+        
         JacobTrans = xinit.matrixJacobiana.T
-        vectorTrans = xinit.vectFunction.T
+      
 
-        nuevaJacob = np.dot(JacobTrans, xinit.matrixJacobiana)
-        nuevaVector = np.dot(vectorTrans, xinit.vectFunction)
+        nuevaJacob = JacobTrans @ xinit.matrixJacobiana   
+        
+        nuevaVector = -JacobTrans @ xinit.vectFunction   
+
+        eigvals = np.linalg.eigvalsh(nuevaJacob)
+        print("Valores propios de JᵀJ:", eigvals)
+
+        if np.any(eigvals <= 0):
+            print("⚠️  A no es definida positiva (al menos un valor propio <= 0)")
+           
+        else:
+            print("✅  A es definida positiva")
 
         xinit.newVector(forma="conjugado", jacobiana_SDP=nuevaJacob, vector_SDP=nuevaVector, iteracion=i)
 
