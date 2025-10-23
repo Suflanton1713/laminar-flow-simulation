@@ -9,7 +9,7 @@ np.set_printoptions(suppress=True, precision=2)
 
 # Parámetros globales
 h = 8
-Vy = -0.000005
+Vy = -0.05
 
 class Bloque:
     def __init__(self, x0, xn, y0, yn):
@@ -55,7 +55,7 @@ class Malla:
     def __establecer_condiciones_de_frontera(self):
         """Método privado: Establece condiciones iniciales"""
         self.malla[:,0] = self.v0
-        self.malla[0,:(self.bloqueSuperior.i0)] = 0
+        self.malla[0,:self.Ny+1] = 0
         self.malla[0,(self.bloqueSuperior.i0):]=0
         self.malla[:,self.Nx+1] = 0
         self.malla[self.Ny+1,:] = 0
@@ -289,10 +289,12 @@ class Vector:
             c = np.dot(r.T, r)
             norm0 = np.sqrt(c)
 
+            
+            """
             print("\n  === Inicio del gradiente conjugado ===")
             print(f"  Norma inicial del residuo: {norm0:.3e}")
             print(f"  Tolerancia relativa: {tol * norm0:.3e}\n")
-
+            """
             # ===============================
             # Ciclo interno de gradiente conjugado
             # ===============================
@@ -301,7 +303,7 @@ class Vector:
                 denom = np.dot(v.T, Av)
 
                 if abs(denom) < 1e-30:
-                    print(f"  [CG] División por cero evitada en iteración {k+1} (A mal condicionada).")
+                    #print(f"  [CG] División por cero evitada en iteración {k+1} (A mal condicionada).")
                     break
 
                 t = c / denom               # Paso t_k
@@ -315,7 +317,7 @@ class Vector:
 
                 # Verificar convergencia
                 if norm_r < tol * norm0:
-                    print(f"  [CG] ✅ Convergió en {k+1} iteraciones (‖r‖ = {norm_r:.3e})")
+                    #print(f"  [CG] ✅ Convergió en {k+1} iteraciones (‖r‖ = {norm_r:.3e})")
                     break
 
                 s = d / c                   # s_k = d/c
@@ -450,6 +452,8 @@ def es_diagonalmente_dominante(A, strict=False):
 
 
 def main():
+
+    
     # Crear bloques
     bloqueSuperior = Bloque(296, 400, 32, 40)
     bloqueInferior = Bloque(176, 232, 1, 16)
@@ -457,6 +461,8 @@ def main():
     print("Generando nueva matriz inicial con algoritmo aleatorio...")
     mallaInicial = Malla(400, 40, h, 1, bloqueSuperior, bloqueInferior, 10, 5, matriz_inicial=None)
     
+    mallaInicial.visualizar_malla()
+
     # Crear vector inicial
     xinit = Vector(mallaInicial.retornar_malla())
     
@@ -477,6 +483,8 @@ def main():
     vec_anterior = xinit.vec.copy()
     
     for i in range(max_iterations):
+       
+        
         print(f"\nIteración: {i+1}")
         
         
@@ -508,10 +516,15 @@ def main():
 
 
         val_propios = np.linalg.eigvalsh(xinit.matrixJacobiana)
-        print("Valores propios de la Jacobiana:", val_propios)
         eigvals = np.linalg.eigvalsh(nuevaJacob)
+        """
+        print("Valores propios de la Jacobiana:", val_propios)
         
+        
+
         print("Valores propios de JᵀJ:", eigvals)
+        """
+        
 
         if np.any(eigvals <= 0):
             print("⚠️  A no es definida positiva (al menos un valor propio <= 0)")
@@ -523,13 +536,13 @@ def main():
 
 
         condTrans = np.linalg.cond(nuevaJacob,2)
-        print(f"  Condición de la nueva Jacobiana: {condTrans}")
+        #print(f"  Condición de la nueva Jacobiana: {condTrans}")
 
 
 
         # Condición 2: Epsilon (cambio entre iteraciones)
         epsilon = np.linalg.norm(xinit.vec - vec_anterior)
-        print(f"  Epsilon (cambio): {epsilon:.10e}")
+        #print(f"  Epsilon (cambio): {epsilon:.10e}")
         
         if epsilon < tolerance_epsilon:
             print(f"\n¡Convergencia alcanzada en {i + 1} iteraciones!")
