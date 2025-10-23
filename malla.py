@@ -183,6 +183,8 @@ class Vector:
         self.matrixJacobiana = np.zeros((len(self.vec), len(self.vec)))
         self.filas = matrizMalla.shape[0]
         self.columnas = matrizMalla.shape[1]
+        self.residuoPrevio = np.zeros(matrizMalla.shape[0] * matrizMalla.shape[1])
+        self.direccionPrevia = np.zeros(matrizMalla.shape[0] * matrizMalla.shape[1])
         
         # Convertir matriz a vector
         for i in range(matrizMalla.shape[0]):
@@ -270,19 +272,25 @@ class Vector:
         elif forma == "conjugado":
             if iteracion == 0:
                 p0 = vector_SDP - np.dot(jacobiana_SDP, self.vectFunction)
+                print(f"  P0: {p0}")
                 r0 = p0.copy()
+                self.residuoPrevio = r0.copy()
+                self.direccionPrevia = p0.copy()
+                print(f"  R0: {r0}")
                 alpha0 = np.dot(r0.T, r0) / np.dot(p0.T, np.dot(jacobiana_SDP, p0))
-
+                print(f"  Alpha0: {alpha0}")
                 xn = vector_SDP + (alpha0 * p0)
-                return xn
+                self.vec = xn
             else:
                 rk = vector_SDP - np.dot(jacobiana_SDP, self.vectFunction)
-                beta_k = np.dot(rk.T, rk) / np.dot(r0.T, r0)
-                pk = rk + beta_k * p0
-                alpha_k = np.dot(rk.T, rk) / np.dot(pk.T, np.dot(jacobiana_SDP, pk))
+                beta_k = - (np.dot(self.direccionPrevia.T, np.dot(jacobiana_SDP,rk)) / np.dot(self.direccionPrevia.T, np.dot(jacobiana_SDP, self.direccionPrevia)))
+                pk = rk + (beta_k * self.residuoPrevio)
+                self.residuoPrevio = rk.copy()
+                self.direccionPrevia = pk.copy()
+                alpha_k = np.dot(rk.T, pk) / np.dot(pk.T, np.dot(jacobiana_SDP, pk))
 
                 xn = vector_SDP + (alpha_k * pk)
-                return xn
+                self.vec = xn
                 
             
         else:
@@ -438,7 +446,7 @@ def main():
         nuevaJacob = np.dot(JacobTrans, xinit.matrixJacobiana)
         nuevaVector = np.dot(vectorTrans, xinit.vectFunction)
 
-        xinit.newVector(forma=None, jacobiana_SDP=nuevaJacob, vector_SDP=nuevaVector, iteracion=i)
+        xinit.newVector(forma="conjugado", jacobiana_SDP=nuevaJacob, vector_SDP=nuevaVector, iteracion=i)
 
 
         condTrans = np.linalg.cond(nuevaJacob,2)
