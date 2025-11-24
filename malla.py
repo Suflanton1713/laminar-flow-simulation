@@ -1,9 +1,10 @@
 #imports y variables globales
-
 import random
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+from scipy.interpolate import RectBivariateSpline
+
 
 np.set_printoptions(suppress=True, precision=2)
 
@@ -449,6 +450,51 @@ def es_diagonalmente_dominante(A, strict=False):
     return True, None, None, None
 
 
+def construir_interpolador_superficie(matriz):
+    """
+    Construye un spline cúbico (RectBivariateSpline) a partir de una matriz 2D.
+    Devuelve una función que puede evaluarse en cualquier punto (y, x).
+    """
+    if RectBivariateSpline is None:
+        raise ImportError(
+            "RectBivariateSpline no está disponible. Instala scipy para usar la interpolación."
+        )
+    filas, columnas = matriz.shape
+    y = np.arange(filas)
+    x = np.arange(columnas)
+    return RectBivariateSpline(y, x, matriz, kx=3, ky=3, s=0)
+
+
+def generar_matriz_suavizada(interpolador, filas, columnas, factor=3):
+    """
+    Evalúa el interpolador sobre una malla refinada (factor veces más puntos por eje).
+    Devuelve la nueva matriz y los vectores de coordenadas suavizados.
+    """
+    # La malla original cuenta con índices [0, filas-1] y [0, columnas-1]
+    y_nuevo = np.linspace(0, filas - 1, (filas - 1) * factor + 1)
+    x_nuevo = np.linspace(0, columnas - 1, (columnas - 1) * factor + 1)
+    matriz_suave = interpolador(y_nuevo, x_nuevo)
+    return matriz_suave, x_nuevo, y_nuevo
+
+
+def mostrar_mapa_calor_suavizado(matriz, titulo="Mapa suavizado", guardar=False, nombre_archivo="malla_suavizada.png"):
+    """
+    Renderiza un mapa de calor de la matriz suavizada usando matplotlib.
+    """
+    plt.figure(figsize=(10, 6))
+    im = plt.imshow(matriz, cmap='viridis', origin='upper')
+    cbar = plt.colorbar(im, shrink=0.8, aspect=20)
+    cbar.set_label('Valor', rotation=270, labelpad=20)
+    plt.title(titulo)
+    plt.xlabel('Índice interpolado en X')
+    plt.ylabel('Índice interpolado en Y')
+    plt.tight_layout()
+    if guardar:
+        plt.savefig(nombre_archivo, dpi=300, bbox_inches='tight')
+        print(f"Imagen suavizada guardada en: {nombre_archivo}")
+    plt.show()
+
+
 def main():
     # Crear bloques
     bloqueSuperior = Bloque(296, 400, 32, 40)
@@ -461,7 +507,7 @@ def main():
     xinit = Vector(mallaInicial.retornar_malla())
     
     # Método de Newton-Raphson
-    max_iterations = 100
+    max_iterations = 200
     tolerance_residuo = 1e-10 #Cambio entre iteraciones 
     tolerance_epsilon = 1e-8
     
@@ -568,6 +614,20 @@ def main():
     print(f"Valor mínimo en mallaInicial.malla: {np.min(mallaInicial.malla)}")
     
     # Guardar matriz final
+    
+    # Construir interpolador y generar malla suavizada para visualización
+    interpolador = construir_interpolador_superficie(matriz_final)
+    matriz_suavizada, _, _ = generar_matriz_suavizada(
+        interpolador,
+        matriz_final.shape[0],
+        matriz_final.shape[1],
+        factor=3
+    )
+    mostrar_mapa_calor_suavizado(
+        matriz_suavizada,
+        titulo="Malla suavizada con spline cúbico",
+        guardar=False
+    )
     
     """
 
