@@ -621,7 +621,7 @@ def main():
         interpolador,
         matriz_final.shape[0],
         matriz_final.shape[1],
-        factor=3
+        factor=10
     )
     mostrar_mapa_calor_suavizado(
         matriz_suavizada,
