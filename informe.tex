@@ -75,11 +75,11 @@
     
     \vfill
     
-    {\Huge\bfseries Informe de Avance \par}
+    {\Huge\bfseries Informe Final \par}
     \vspace{0.5cm}
     {\LARGE Simulación de Flujo Laminar Incompresible con Obstáculos \par}
     \vspace{0.25cm}
-    {\Large\itshape Discretización de Navier--Stokes 2D, Mallas, Ecuaciones de Borde y Preparación del Método de Newton--Raphson \par}
+    {\Large\itshape Discretización de Navier--Stokes 2D, Mallas, Método de Newton--Raphson, solución iterativa de sistemas lineales y funciones de interpolación (Spline cúbico natural) \par}
     
     \vfill
     
@@ -91,7 +91,7 @@
     
     \vfill
     
-    {\large \today \par}
+    {\large 27 de noviembre de 2025 \par}
     
 \end{titlepage}
 
@@ -101,7 +101,13 @@
 \newpage
 
 \section*{Resumen}
-Se presenta el avance del proyecto de simulación de flujo incompresible en 2D alrededor de dos vigas sumergidas. Partimos del sistema de Navier--Stokes estacionario y la ecuación de continuidad, restringidos a flujo bidimensional en un canal rectangular. Se detalla la formulación continua, la discretización por diferencias finitas centradas en malla uniforme ($h_x=h_y=h=8$), y se derivan explícitamente las \textbf{nueve ecuaciones especiales} que surgen al imponer condiciones de contorno (cuatro lados y cuatro esquinas) más la condición de no deslizamiento en las vigas. Mostramos dos configuraciones de malla: la original ($N_x=400$, $N_y=40$) y una versión reducida para acelerar prototipado ($N'_x=50$, $N'_y=5$ puntos interiores). Finalmente, se describe la \emph{estrategia de inicialización} de velocidades para el método de Newton--Raphson y los \emph{criterios de parada} del solver.
+Se presenta la implementación completa de una simulación numérica de flujo laminar incompresible en 2D alrededor de dos vigas sumergidas, basada en el problema propuesto por Landau \& Páez. Partiendo del sistema de Navier--Stokes estacionario simplificado ($\nu=1$, $\nabla P=0$), se desarrolla la discretización por diferencias finitas centradas en malla uniforme ($h=8$), derivando las \textbf{nueve ecuaciones especiales} para el tratamiento de fronteras (cuatro lados, cuatro esquinas y condición de no deslizamiento en vigas).
+
+El sistema no lineal resultante ($364$ ecuaciones) se resuelve mediante el \textbf{método de Newton--Raphson}, con una estrategia de inicialización informada que refleja la física del flujo (velocidades decrecientes de entrada a salida). Para resolver el sistema lineal en cada iteración, se analizaron cinco métodos iterativos: \emph{Richardson}, \emph{Jacobi}, \emph{Gauss-Seidel}, \emph{Gradiente Descendente} y \emph{Gradiente Conjugado}. El análisis del radio espectral demostró que los primeros cuatro métodos no convergen para nuestra matriz Jacobiana (no simétrica, no diagonalmente dominante).
+
+La solución adoptada consiste en transformar el sistema $J\cdot H = -F$ al sistema equivalente $J^T J \cdot H = -J^T F$, donde $J^T J$ es simétrica y definida positiva (SDP), permitiendo aplicar el \textbf{Gradiente Conjugado}. Aunque el número de condición aumenta ($\kappa(J)\approx24 \to \kappa(J^TJ)\approx577$), el método converge en $\sim100$ iteraciones por paso de Newton, alcanzando convergencia total en $\sim116$ iteraciones de Newton-Raphson.
+
+Finalmente, se implementó \textbf{interpolación con splines cúbicos bidimensionales} (RectBivariateSpline de SciPy) para generar visualizaciones suavizadas del campo de velocidades, incluyendo superficies 3D y perfiles de corte. El código Python resultante genera automáticamente valores iniciales y produce mapas de calor, visualizaciones del Jacobiano y campos de velocidades refinados.
 \newpage
 
 \section{Geometría, Mallas y Condiciones de Frontera}
