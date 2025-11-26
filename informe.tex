@@ -85,9 +85,9 @@
     
     {\large\textbf{Presentado por:} \par}
     \vspace{0.5cm}
-    {\large Juan David Rincón \par}
-    {\large Maria Juliana Saavedra \par}
-    {\large Libardo Alejandro Quintero \par}
+    {\large Juan David Rincón - 2342032\par}
+    {\large Maria Juliana Saavedra - 2344035 \par}
+    {\large Libardo Alejandro Quintero - 2342181\par}
     
     \vfill
     
@@ -1165,41 +1165,57 @@ Durante la ejecución del algoritmo se observa:
     \item \textbf{Análisis de Sensibilidad:} Estudiar cómo varían los resultados con diferentes valores de $V_y$, diferentes geometrías de bloques y diferentes condiciones de frontera.
 \end{itemize}
 
-\begin{thebibliography}{9}
+\section{Repositorio del Proyecto}
+
+El código fuente completo de este proyecto está disponible públicamente en GitHub:
+
+\begin{center}
+\url{https://github.com/Suflanton1713/laminar-flow-simulation}
+\end{center}
+
+\subsection{Contenido del Repositorio}
+
+\begin{itemize}
+    \item \texttt{malla.py}: Código principal de la simulación en Python, incluyendo las clases \texttt{Bloque}, \texttt{Malla} y \texttt{Vector}, así como todas las funciones de visualización e interpolación.
+    \item \texttt{informe.tex}: Este documento en formato \LaTeX.
+    \item \texttt{README.md}: Documentación completa del proyecto.
+    \item Imágenes generadas: Visualizaciones del Jacobiano, valores iniciales, superficie 3D del spline, cortes de interpolación y campo de velocidades suavizado.
+    \item \texttt{deprecated\_initial\_values/}: Carpeta con valores iniciales de pruebas anteriores.
+\end{itemize}
+
+\subsection{Sobre el Modelo y los Datos Iniciales}
+
+El modelo implementado está basado en el problema propuesto en el libro de \textbf{Landau \& Páez} \cite{LandauPaez} (Capítulo 4.6: Hidrodinámica). La geometría del canal, la posición de los obstáculos y los parámetros físicos son valores fijos establecidos según esta referencia.
+
+Los \textbf{valores iniciales} para el método de Newton-Raphson son \textbf{generados automáticamente} por el código mediante un algoritmo que simula el comportamiento físico esperado del fluido: velocidades que decrecen de izquierda a derecha (pérdida de momento) y de arriba hacia abajo (perfil de velocidad). No se requiere ninguna configuración manual ni archivos de datos externos.
+
+\subsection{Documentación en el README}
+
+El archivo \texttt{README.md} contiene documentación detallada que incluye:
+
+\begin{itemize}
+    \item \textbf{Documentación de clases}: Descripción completa de las clases \texttt{Bloque}, \texttt{Malla} y \texttt{Vector} con sus parámetros, atributos y métodos.
+    \item \textbf{Documentación de funciones}: Explicación de todas las funciones auxiliares de análisis, visualización e interpolación.
+    \item \textbf{Diagrama del proceso \texttt{main()}}: Flujo de ejecución paso a paso desde la definición de geometría hasta la generación de resultados suavizados.
+    \item \textbf{Instrucciones de instalación}: Requisitos y comandos para ejecutar la simulación.
+    \item \textbf{Descripción de resultados}: Tabla con todos los archivos de imagen generados.
+\end{itemize}
+
+\begin{thebibliography}{3}
 \bibitem{LandauPaez}
 R.~Landau \& M.~Páez.
 \newblock \emph{Computational Problems for Physics: With Guided Solutions Using Python}.
 \newblock CRC Press, 2018. Cap.~4.6 Hidrodinámica (Navier–Stokes, viga sumergida, vorticidad).
-
-\bibitem{NumRec}
-W.~Press, S.~Teukolsky, W.~Vetterling \& B.~Flannery.
-\newblock \emph{Numerical Recipes: The Art of Scientific Computing}.
-\newblock Cambridge University Press, 3rd Edition, 2007.
-
-\bibitem{Burden}
-R.~Burden \& J.~Faires.
-\newblock \emph{Análisis Numérico}.
-\newblock Cengage Learning, 9th Edition, 2011.
 
 \bibitem{Kincaid}
 D.~Kincaid \& W.~Cheney.
 \newblock \emph{Numerical Analysis: Mathematics of Scientific Computing}.
 \newblock Brooks/Cole, 3rd Edition, 2002.
 
-\bibitem{Shewchuk}
-J.~R.~Shewchuk.
-\newblock \emph{An Introduction to the Conjugate Gradient Method Without the Agonizing Pain}.
-\newblock Carnegie Mellon University, 1994.
-
 \bibitem{SciPy}
 P.~Virtanen et al.
 \newblock \emph{SciPy 1.0: Fundamental Algorithms for Scientific Computing in Python}.
 \newblock Nature Methods, 17:261–272, 2020.
 
-\bibitem{Golub}
-G.~H.~Golub \& C.~F.~Van Loan.
-\newblock \emph{Matrix Computations}.
-\newblock Johns Hopkins University Press, 4th Edition, 2013.
-\end{thebibliography}
 
 \end{document}

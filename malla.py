@@ -3,6 +3,16 @@ Simulación de Flujo Laminar 2D - Método de Newton-Raphson con Gradiente Conjug
 ==================================================================================
 Resuelve las ecuaciones de Navier-Stokes simplificadas para flujo incompresible
 usando diferencias finitas y el método de Newton-Raphson.
+
+Autores:
+--------
+    - Juan David Rincón          (Código: 2342032)
+    - Maria Juliana Saavedra     (Código: 2344035)
+    - Libardo Alejandro Quintero (Código: 2342181)
+
+Curso: Simulación y Computación Numérica
+Profesora: María Patricia Trujillo
+Universidad del Valle - Semestre 2025-II
 """
 
 import random
