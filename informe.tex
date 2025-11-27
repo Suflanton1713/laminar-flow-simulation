@@ -6,7 +6,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
-% \usepackage{microtype}  % Comentado para acelerar compilación en Overleaf
+\usepackage{microtype}
 \usepackage{geometry}
 \geometry{margin=1in}
 \usepackage{amsmath,amssymb,amsfonts,mathtools}
@@ -1138,7 +1138,7 @@ Durante la ejecución del algoritmo se observa:
 \end{itemize}
 
 \newpage
-\section{Conclusiones y Próximos Pasos}
+\section{Conclusiones}
 
 \textbf{Conclusiones.} Se ha establecido un marco teórico y numérico sólido para la simulación. Se formalizó la geometría, las mallas, la discretización por diferencias finitas y el catálogo completo de las ecuaciones especiales para el tratamiento de fronteras. Crucialmente, se ha definido e implementado:
 
@@ -1150,24 +1150,6 @@ Durante la ejecución del algoritmo se observa:
     \item Implementación funcional en Python con visualización de resultados.
 \end{itemize}
 
-\textbf{Próximos Pasos.}
-\begin{itemize}[leftmargin=1.25em]
-    \item \textbf{Validación Extendida:} Verificar la convergencia y estabilidad del método en diferentes condiciones iniciales y parámetros físicos.
-    
-    \item \textbf{Optimización para Mallas Grandes:} Implementar técnicas de matrices dispersas (sparse matrices) para reducir el costo computacional al escalar a $h=1$.
-    
-    \item \textbf{Integración del Sistema Completo:} Levantar las simplificaciones actuales. Esto implica:
-    \begin{itemize}
-        \item Discretizar e incorporar la ecuación de momento para la componente $v_y$.
-        \item Implementar un método para satisfacer la ecuación de continuidad (ej., un esquema de corrección de presión o la formulación de vorticidad-función de corriente).
-    \end{itemize}
-    
-    \item \textbf{Análisis y Escalado:} Una vez validado el modelo completo, ejecutar la simulación en la malla fina ($400 \times 40$ con $h=1$) y analizar los resultados.
-    
-    \item \textbf{Visualización Avanzada:} Generar gráficos de campos vectoriales, líneas de corriente y contornos de vorticidad para interpretar físicamente la interacción del flujo con los obstáculos.
-    
-    \item \textbf{Análisis de Sensibilidad:} Estudiar cómo varían los resultados con diferentes valores de $V_y$, diferentes geometrías de bloques y diferentes condiciones de frontera.
-\end{itemize}
 
 \section{Repositorio del Proyecto}
 
